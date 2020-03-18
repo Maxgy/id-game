@@ -11,6 +11,7 @@ pub enum CurrentState {
 pub struct MainState {
     curr_state: CurrentState,
     world: World,
+    messages: Vec<String>,
 }
 
 impl MainState {
@@ -27,6 +28,7 @@ impl MainState {
         Self {
             curr_state: CurrentState::Menu,
             world,
+            messages: vec![String::new()],
         }
     }
 
@@ -47,6 +49,10 @@ impl MainState {
 
         ctx.print(1, 2, "Hello, sailor!");
 
+        for (y, message) in self.messages.iter().enumerate() {
+            ctx.print(1, y as i32 + 5, message);
+        }
+
         for (rect,) in read_query.iter_immutable(&self.world) {
             ctx.draw_box(
                 rect.x1,
@@ -61,7 +67,20 @@ impl MainState {
         if let Some(key) = ctx.key {
             match key {
                 VirtualKeyCode::Q => self.curr_state = CurrentState::Quitting,
-                _ => (),
+                VirtualKeyCode::Return => {
+                    if !self.messages.last().unwrap().is_empty() {
+                        self.messages.push(String::new());
+                    }
+                }
+                VirtualKeyCode::Back => {
+                    self.messages.last_mut().unwrap().pop();
+                }
+                VirtualKeyCode::Space => self.messages.last_mut().unwrap().push(' '),
+                _ => self
+                    .messages
+                    .last_mut()
+                    .unwrap()
+                    .push(format!("{:?}", key).chars().last().unwrap_or(' ')),
             }
         }
     }
