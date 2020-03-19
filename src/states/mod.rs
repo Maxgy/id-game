@@ -21,7 +21,7 @@ impl MainState {
 
         let rects = vec![
             (Rect::with_size(10, 10, 10, 10),),
-            (Rect::with_size(50, 5, 20, 5),),
+            (Rect::with_size(60, 5, 15, 5),),
         ];
         world.insert((), rects.into_iter());
 
@@ -49,6 +49,16 @@ impl MainState {
 
         ctx.print(1, 2, "Hello, sailor!");
 
+        ctx.draw_bar_vertical(
+            50,
+            0,
+            50,
+            1,
+            1,
+            RGB::from_u8(255, 255, 255),
+            RGB::from_u8(255, 255, 255),
+        );
+
         for (y, message) in self.messages.iter().enumerate() {
             ctx.print(1, y as i32 + 5, message);
         }
@@ -66,9 +76,11 @@ impl MainState {
 
         if let Some(key) = ctx.key {
             match key {
-                VirtualKeyCode::Q => self.curr_state = CurrentState::Quitting,
                 VirtualKeyCode::Return => {
                     if !self.messages.last().unwrap().is_empty() {
+                        if self.messages.last().unwrap() == "QUIT" {
+                            self.curr_state = CurrentState::Quitting;
+                        }
                         self.messages.push(String::new());
                     }
                 }
