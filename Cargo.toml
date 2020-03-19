@@ -6,4 +6,5 @@ edition = "2018"
 
 [dependencies]
 bracket-lib = { version = "0.7", features = ["threaded"]}
+kingslayer = { path = "../kingslayer" }
 legion = "0.2"

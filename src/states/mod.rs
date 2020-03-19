@@ -1,5 +1,7 @@
 use bracket_lib::prelude::*;
 
+use kingslayer::Lexer;
+
 use legion::prelude::*;
 
 pub enum CurrentState {
@@ -81,6 +83,7 @@ impl MainState {
                         if self.messages.last().unwrap() == "QUIT" {
                             self.curr_state = CurrentState::Quitting;
                         }
+                        println!("{:?}", Lexer::lex(self.messages.last().unwrap()));
                         self.messages.push(String::new());
                     }
                 }
