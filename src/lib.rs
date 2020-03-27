@@ -1,3 +1,6 @@
-mod states;
+mod components;
+mod input;
+mod state;
+mod types;
 
-pub use states::MainState;
+pub use state::State;
