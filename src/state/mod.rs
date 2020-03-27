@@ -32,8 +32,8 @@ impl State {
         let universe = Universe::new();
         let mut world = universe.create_world();
 
-        let rects = vec![(Room::new(Rect::with_size(10, 10, 10, 10)),)];
-        world.insert((), rects.into_iter());
+        let rooms = vec![(Room::new(Rect::with_size(10, 10, 10, 10)),)];
+        world.insert((), rooms.into_iter());
 
         Self {
             curr_state: CurrentState::Menu,
@@ -87,10 +87,7 @@ impl State {
 
         ctx.draw_bar_vertical(50, 0, 50, 1, 1, RGB::named(WHITE), RGB::named(WHITE));
 
-        // Print messages
-        for (y, message) in self.messages.iter().enumerate() {
-            ctx.print(1, y as i32 + 5, message);
-        }
+        self.print_messages(ctx);
 
         self.print_rooms(ctx);
 
@@ -124,6 +121,31 @@ impl State {
                     .unwrap()
                     .push(format!("{:?}", key).chars().last().unwrap_or(' ')),
             }
+        }
+    }
+
+    fn print_messages(&mut self, ctx: &mut BTerm) {
+        // Print messages
+        let mut y = 0;
+        let mut x = 0;
+        let mut line_len = 0;
+        for message in self.messages.iter() {
+            for c in message.chars() {
+                if c == ' ' {
+                    line_len = x;
+                }
+                if line_len > 15 {
+                    y += 1;
+                    x = 0;
+                    line_len = 0;
+                } else {
+                    x += 1;
+                }
+                ctx.print(52 + x as i32, y as i32 + 5, &c.to_string());
+            }
+            x = 0;
+            y += 2;
+            line_len = 0;
         }
     }
 
