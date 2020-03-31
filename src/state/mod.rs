@@ -14,6 +14,8 @@ pub enum CurrentState {
     Playing,
 }
 
+add_wasm_support!();
+
 pub struct State {
     curr_state: CurrentState,
     world: World,
@@ -21,8 +23,8 @@ pub struct State {
     tic: u8,
     offset: (i32, i32),
     mouse: Point,
-    mouse_pressed: bool,
-    mouse_released: bool,
+    mouse_click: Option<(usize, bool)>,
+    mouse_pressed: (usize, bool),
     cursor: String,
     messages: Vec<String>,
 }
@@ -42,8 +44,8 @@ impl State {
             tic: 0,
             offset: (0, 0),
             mouse: Point::new(0, 0),
-            mouse_pressed: false,
-            mouse_released: false,
+            mouse_click: None,
+            mouse_pressed: (0, false),
             cursor: String::from("<"),
             messages: vec![String::new()],
         }
@@ -62,6 +64,15 @@ impl State {
     }
 
     fn play_state(&mut self, ctx: &mut BTerm) {
+        let mut input = INPUT.lock();
+
+        input.for_each_message(|event| match event {
+            BEvent::MouseClick { button, pressed } => self.mouse_click = Some((button, pressed)),
+            BEvent::MouseButtonUp { button } => self.mouse_pressed = (button, false),
+            BEvent::MouseButtonDown { button } => self.mouse_pressed = (button, true),
+            _ => (),
+        });
+
         self.tic += 4;
         if self.tic > 99 {
             self.tic = 0;
@@ -69,14 +80,6 @@ impl State {
 
         self.mouse = ctx.mouse_point();
 
-        if ctx.left_click {
-            if self.mouse_pressed {
-                self.mouse_released = true;
-            }
-            self.mouse_pressed = !self.mouse_pressed;
-        }
-
-        // Render custom mouse cursor
         ctx.print_color(
             self.mouse.x,
             self.mouse.y,
@@ -93,7 +96,7 @@ impl State {
 
         self.key_input(ctx);
 
-        self.mouse_released = false;
+        self.mouse_click = None;
     }
 
     fn key_input(&mut self, ctx: &BTerm) {
@@ -125,7 +128,6 @@ impl State {
     }
 
     fn print_messages(&mut self, ctx: &mut BTerm) {
-        // Print messages
         let mut y = 0;
         let mut x = 0;
         let mut line_len = 0;
