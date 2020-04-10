@@ -4,7 +4,13 @@ version = "0.1.0"
 authors = ["Maxwell Anderson <maxwell.brayden.anderson@gmail.com>"]
 edition = "2018"
 
+[features]
+default = ["bracket-lib/opengl", "legion/default"]
+web = ["bracket-lib/opengl"]
+console = ["bracket-lib/crossterm", "legion/default"]
+
 [dependencies]
-bracket-lib = { git = "https://github.com/thebracket/bracket-lib", features = ["threaded"]}
+legion = { version = "0.2", default-features = false }
+bracket-lib = { git = "https://github.com/thebracket/bracket-lib", optional = true, default-features = false, features = ["threaded"] }
 kingslayer = { git = "https://github.com/Maxgy/kingslayer" }
-legion = "0.2"
+wasm-bindgen = { version = "0.2", optional = true }

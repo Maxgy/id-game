@@ -2,14 +2,15 @@ use bracket_lib::prelude::*;
 
 use id_game::State;
 
-fn main() {
-    let ctx = BTermBuilder::simple(80, 40)
-        .unwrap()
-        .with_tile_dimensions(16, 16)
+fn main() -> BError {
+    let ctx = BTermBuilder::simple(60, 30)?
+        .with_tile_dimensions(20, 20)
+        .with_fullscreen(true)
+        .with_fps_cap(60.0)
+        .with_advanced_input(true)
         .with_title("id-game")
-        .build()
-        .unwrap();
-    let gs = State::new(80, 40);
+        .build()?;
+    let gs = State::new(60, 30);
 
-    main_loop(ctx, gs).unwrap();
+    main_loop(ctx, gs)
 }
