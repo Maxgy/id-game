@@ -37,6 +37,6 @@ impl GameCell {
     }
     /// Return a black background for the cell
     pub fn bg_color(&self) -> RGB {
-        RGB::new()
+        RGB::named(WHITE)
     }
 }

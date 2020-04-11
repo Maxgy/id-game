@@ -10,10 +10,10 @@ use legion::prelude::*;
 use crate::{
     components::{GameCell, Id, Room},
     input::Parser,
+    types::Clock,
 };
 
-const WHITE: (u8, u8, u8) = (255, 255, 255);
-const DARK_GRAY: (u8, u8, u8) = (100, 100, 100);
+const LIGHT_GRAY: (u8, u8, u8) = (170, 170, 170);
 const GREEN: (u8, u8, u8) = (0, 170, 0);
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -39,6 +39,8 @@ pub struct State {
     mouse_pressed: (usize, bool, bool),
     cursor: String,
     messages: Vec<String>,
+    clock: Clock,
+    tab_shown: bool,
 }
 
 impl State {
@@ -46,11 +48,11 @@ impl State {
         let universe = Universe::new();
         let mut world = universe.create_world();
 
-        let rooms = vec![(Room::new(Rect::with_size(15, 5, 10, 10)),)];
+        let rooms = vec![(Room::new(Rect::with_size(14, 14, 6, 6)),)];
         world.insert((), rooms.into_iter());
 
         let id = vec![(
-            GameCell::new(Point::new(5, 5), '@', RGB::named(GREEN)),
+            GameCell::new(Point::new(17, 17), '@', RGB::named(GREEN)),
             Id {},
         )];
         world.insert((), id.into_iter());
@@ -71,6 +73,8 @@ impl State {
             mouse_pressed: (0, false, false),
             cursor: String::from("<"),
             messages: vec![String::new()],
+            clock: Clock::new(),
+            tab_shown: false,
         }
     }
 
@@ -89,17 +93,17 @@ impl State {
     fn play_state(&mut self, ctx: &mut BTerm) {
         self.schedule.execute(&mut self.world);
 
+        self.clock.update(self.dt);
+
         self.render_ui(ctx);
 
         ctx.print_color(
             self.mouse.x,
             self.mouse.y,
             RGB::named((0, 155 + self.tic, 0)),
-            RGB::new(),
+            RGB::named(WHITE),
             &self.cursor,
         );
-
-        self.print_messages(ctx);
 
         self.render(ctx);
 
@@ -109,59 +113,86 @@ impl State {
     fn key_input(&mut self, ctx: &BTerm) {
         if let Some(key) = ctx.key {
             match key {
-                VirtualKeyCode::Return => {
-                    let last = if let Some(last) = self.messages.last() {
-                        last.clone()
-                    } else {
-                        String::new()
-                    };
-                    if !last.is_empty() {
-                        self.messages.push(Parser::parse(Lexer::lex(&last)));
-
-                        self.messages.push(String::new());
-                    }
-                }
-                VirtualKeyCode::Back => {
-                    self.messages.last_mut().unwrap().pop();
-                }
-                VirtualKeyCode::Space => self.messages.last_mut().unwrap().push(' '),
+                VirtualKeyCode::Tab => self.tab_shown = !self.tab_shown,
                 VirtualKeyCode::End => self.curr_state = CurrentState::Quitting,
-                _ => self
-                    .messages
-                    .last_mut()
-                    .unwrap()
-                    .push(format!("{:?}", key).chars().last().unwrap_or(' ')),
+                _ => self.push_message_char(key),
             }
         }
     }
 
-    fn render_ui(&mut self, ctx: &mut BTerm) {
+    fn push_message_char(&mut self, key: VirtualKeyCode) {
+        match key {
+            VirtualKeyCode::Return => {
+                let last = if let Some(last) = self.messages.last() {
+                    last.clone()
+                } else {
+                    String::new()
+                };
+                if !last.is_empty() {
+                    self.messages.push(Parser::parse(Lexer::lex(&last)));
+
+                    self.messages.push(String::new());
+                }
+            }
+            VirtualKeyCode::Back => {
+                self.messages.last_mut().unwrap().pop();
+            }
+            VirtualKeyCode::Space => self.messages.last_mut().unwrap().push(' '),
+            _ => self
+                .messages
+                .last_mut()
+                .unwrap()
+                .push(format!("{:?}", key).chars().last().unwrap_or(' ')),
+        }
+    }
+
+    fn render_ui(&self, ctx: &mut BTerm) {
         for x in 0..self.window_size.0 {
             for y in 0..self.window_size.1 - 1 {
-                ctx.print_color(x as i32, y as i32, RGB::named(DARK_GRAY), RGB::new(), ".")
+                ctx.print_color(
+                    x as i32,
+                    y as i32,
+                    RGB::named(LIGHT_GRAY),
+                    RGB::named(WHITE),
+                    ".",
+                )
             }
         }
 
-        ctx.draw_hollow_box(
-            self.window_size.0 as i32 - self.window_size.0 as i32 / 4 - 1,
-            0,
-            self.window_size.0 as i32 / 4,
-            self.window_size.1 as i32 - 1,
-            RGB::named(WHITE),
-            RGB::new(),
-        );
+        if self.tab_shown {
+            ctx.draw_hollow_box(
+                self.window_size.0 as i32 - self.window_size.0 as i32 / 4 - 1,
+                0,
+                self.window_size.0 as i32 / 4,
+                self.window_size.1 as i32 - 1,
+                RGB::new(),
+                RGB::named(WHITE),
+            );
+
+            self.print_messages(ctx);
+        } else {
+            ctx.print_color(
+                self.window_size.0 as i32 - 10,
+                2,
+                RGB::new(),
+                RGB::named(WHITE),
+                "Press TAB",
+            );
+        }
         ctx.draw_hollow_box(
             0,
             0,
             self.window_size.0 as i32 - 1,
             self.window_size.1 as i32 - 1,
-            RGB::named(WHITE),
             RGB::new(),
+            RGB::named(WHITE),
         );
+
+        ctx.print_color(2, 2, RGB::new(), RGB::named(WHITE), self.clock.print());
     }
 
-    fn print_messages(&mut self, ctx: &mut BTerm) {
-        let mut y = 0;
+    fn print_messages(&self, ctx: &mut BTerm) {
+        let mut y = 1;
         let mut x = 0;
         let mut line_len = 0;
         for message in self.messages.iter() {
@@ -169,14 +200,20 @@ impl State {
                 if c == ' ' {
                     line_len = x;
                 }
-                if line_len > 15 {
+                if line_len > self.window_size.0 / 4 - 7 {
                     y += 1;
                     x = 0;
                     line_len = 0;
                 } else {
                     x += 1;
                 }
-                ctx.print(52 + x as i32, y as i32 + 5, &c.to_string());
+                ctx.print_color(
+                    self.window_size.0 as i32 - self.window_size.0 as i32 / 4 + x as i32,
+                    y as i32,
+                    RGB::new(),
+                    RGB::named(WHITE),
+                    &c.to_string(),
+                );
             }
             x = 0;
             y += 2;
@@ -190,11 +227,11 @@ impl State {
         for (room,) in read_query.iter_immutable(&self.world) {
             ctx.draw_hollow_box(
                 room.rect().x1,
-                room.rect().y2,
+                room.rect().y1,
                 room.rect().width(),
                 room.rect().height(),
-                RGB::named(WHITE),
                 RGB::new(),
+                RGB::named(WHITE),
             );
         }
 
